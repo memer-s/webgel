@@ -1,15 +1,65 @@
 import { mat4 } from 'gl-matrix';
+import { stringify } from 'querystring';
 // SOURCES: https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Tutorial
 // Author: memer-s
 
+class Vec3 {
+	x: number
+	y: number
+	z: number
+
+	constructor(x: number, y:number, z: number) {
+		this.x = x;
+		this.y = y;
+		this.z = z;
+	}
+}
+
+class WObject {
+	position: Vec3;
+	constructor(pos: Vec3) {
+		this.position = pos;
+	}
+}
+
+
+class Camera extends WObject {
+	constructor(pos: Vec3) {
+		super(pos);
+	}
+}
+
+class Uniform {
+	type: string
+	value: number
+	constructor(type: string, value: number) {
+		this.type = type,
+		this.value = value
+	}
+}
+
 class WebGel {
-	gl: WebGLRenderingContext;
 	programInfo: object;
-	program: any;
-	positionBuffer: object;
+	private gl: WebGLRenderingContext;
+	private program: any;
+	private Buffers: object;
+	private _camera: Camera | null = null;
+	private then: number = 0;
+	private dt: number = 0;
+	private animationFunction: (dt: number) => void = () => {};
+	private time: number = 0.0;
+	private uniforms: object;
+
+	private vss: string;
+	private fss: string;
 
 	constructor(canvas: any, vss: string, fss: string) {
 		if (canvas === null) throw ("canvas element not found")
+
+		this.vss = vss;
+		this.fss = fss;
+
+		this.uniforms = {'time': new Uniform("float", this.time)};
 
 		let ctx: any = canvas.getContext("webgl");
 		if (ctx == null) {
@@ -25,12 +75,17 @@ class WebGel {
 		
 		this.program = this.initShaderProgram(vss, fss);
 		this.programInfo = this.getProgramInfo(this.program); 
-		this.positionBuffer = this.initBuffers();
+		this.Buffers = this.initBuffers();
 
-		this.drawScene(this.programInfo, this.positionBuffer);
 	}
 
-	initShaderProgram = (vsSource: string, fsSource: string) => {
+	private reload = () => {
+		this.program = this.initShaderProgram(this.vss, this.fss);
+		this.programInfo = this.getProgramInfo(this.program); 
+		this.Buffers = this.initBuffers();
+	}
+
+	private initShaderProgram = (vsSource: string, fsSource: string) => {
 		const vertexShader = this.loadShader(this.gl.VERTEX_SHADER, vsSource);
 		const fragmentShader = this.loadShader(this.gl.FRAGMENT_SHADER, fsSource);
 
@@ -47,7 +102,7 @@ class WebGel {
 		return shaderProgram;
 	}
 
-	loadShader = (type: any, source: string) => {
+	private loadShader = (type: any, source: string) => {
 		const shader: WebGLShader | null = this.gl.createShader(type);
 
 		if (shader == null) throw (`Shader of type: ${type} invalid.`);
@@ -64,9 +119,13 @@ class WebGel {
 		return shader;
 	}
 
-	initBuffers = () => {
+	private initBuffers = () => {
 		const positionBuffer = this.gl.createBuffer();
 		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer);
+
+		// Now pass the list of positions into WebGL to build the
+		// shape. We do this by creating a Float32Array from the
+		// JavaScript array, then use it to fill the current buffer.
 		const positions = [
 			1.0, 1.0,
 			-1.0, 1.0,
@@ -74,35 +133,69 @@ class WebGel {
 			-1.0, -1.0,
 		];
 
-		// Now pass the list of positions into WebGL to build the
-		// shape. We do this by creating a Float32Array from the
-		// JavaScript array, then use it to fill the current buffer.
-
 		this.gl.bufferData(this.gl.ARRAY_BUFFER,
 			new Float32Array(positions),
 			this.gl.STATIC_DRAW);
 
+		const colors = [
+			1.0,  1.0,  1.0,  1.0,    // white
+			1.0,  0.0,  0.0,  1.0,    // red
+			0.0,  1.0,  0.0,  1.0,    // green
+			0.0,  0.0,  1.0,  1.0,    // blue
+		];
+
+		const colorBuffer = this.gl.createBuffer();
+		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, colorBuffer);
+		this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(colors), this.gl.STATIC_DRAW)
+
+
+
 		return {
 			position: positionBuffer,
+			color: colorBuffer
 		};
 	}
 
-	getProgramInfo = (sp: WebGLProgram) => {
-		return {
-			program: sp,
-    attribLocations: {
-      vertexPosition: this.gl.getAttribLocation(sp, 'aVertexPosition'),
-    },
-    uniformLocations: {
-      projectionMatrix: this.gl.getUniformLocation(sp, 'uProjectionMatrix'),
-      modelViewMatrix: this.gl.getUniformLocation(sp, 'uModelViewMatrix'),
-    },
-		}
+	useCamera(camera: Camera) {
+		this._camera = camera;
+		requestAnimationFrame(this.render);
 	}
 
-	drawScene = (programInfo: any, buffers: any) => {
-		console.log(programInfo);
+	private getProgramInfo = (sp: WebGLProgram) => {
+		let pInfo = {
+			program: sp,
+			attribLocations: {
+				vertexPosition: this.gl.getAttribLocation(sp, 'aVertexPosition'),
+				vertexColor: this.gl.getAttribLocation(sp, "aVertexColor")
+			},
+			uniformLocations: {
+				projectionMatrix: this.gl.getUniformLocation(sp, 'uProjectionMatrix'),
+				modelViewMatrix: this.gl.getUniformLocation(sp, 'uModelViewMatrix'),
+			},
+		}
 		
+		for(let uniform in this.uniforms) {
+			let obj = (this.uniforms as any)[uniform];
+			if(obj.type === "float") {
+				(pInfo.uniformLocations as any)[uniform] = this.gl.getUniformLocation(sp, uniform)
+			}
+		}
+		console.log(pInfo);
+		
+		return pInfo;
+	}
+
+	addUniform = (key: string, uniform: Uniform) => {
+		(this.uniforms as any)[key] = uniform;
+		console.log(this.uniforms);
+		this.reload()
+	}
+
+	updateUniform = (key: string, value: number) => {
+		(this.uniforms as any)[key].value = value;
+	}
+
+	private drawScene = (programInfo: any, buffers: any) => {
 		this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
 		this.gl.clearDepth(1.0);
 		this.gl.enable(this.gl.DEPTH_TEST);
@@ -130,10 +223,19 @@ class WebGel {
 
 		// Now move the drawing position a bit to where we want to
 		// start drawing the square.
-
+		if(this._camera)
 		mat4.translate(modelViewMatrix,     // destination matrix
 			modelViewMatrix,     // matrix to translate
-			[-0.0, 0.0, -6.0]);  // amount to translate
+			[this._camera.position.x, this._camera.position.y, this._camera.position.z]
+		);  // amount to translate
+		else {
+			console.error("No camera inited.");
+			
+			mat4.translate(modelViewMatrix,     // destination matrix
+				modelViewMatrix,     // matrix to translate
+				[0, 0, -5]
+			);  // amount to translate
+		}
 
 		// Tell WebGL how to pull out the positions from the position
 		// buffer into the vertexPosition attribute.
@@ -151,9 +253,31 @@ class WebGel {
 				type,
 				normalize,
 				stride,
+				offset
+			);
+
+			this.gl.enableVertexAttribArray(
+				programInfo.attribLocations.vertexPosition
+			);
+		}
+
+		{
+			const numComponents = 4;
+			const type = this.gl.FLOAT;
+			const normalize = false;
+			const stride = 0;
+			const offset = 0;
+			this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffers.color);
+			this.gl.vertexAttribPointer(
+				programInfo.attribLocations.vertexColor,
+				numComponents,
+				type,
+				normalize,
+				stride,
 				offset);
 			this.gl.enableVertexAttribArray(
-				programInfo.attribLocations.vertexPosition);
+				programInfo.attribLocations.vertexColor
+			);
 		}
 
 		// Tell WebGL to use our program when drawing
@@ -165,11 +289,28 @@ class WebGel {
 		this.gl.uniformMatrix4fv(
 			programInfo.uniformLocations.projectionMatrix,
 			false,
-			projectionMatrix);
+			projectionMatrix
+		);
+
 		this.gl.uniformMatrix4fv(
 			programInfo.uniformLocations.modelViewMatrix,
 			false,
-			modelViewMatrix);
+			modelViewMatrix
+		);
+
+		
+		{		
+			for(let uniform in this.uniforms) {
+				let obj = (this.uniforms as any)[uniform];
+				if(obj.type === "float") {
+					this.gl.uniform1f(
+						programInfo.uniformLocations[uniform],
+						obj.value,
+					)
+				}
+			}
+		}
+		
 
 		{
 			const offset = 0;
@@ -177,6 +318,28 @@ class WebGel {
 			this.gl.drawArrays(this.gl.TRIANGLE_STRIP, offset, vertexCount);
 		}
 	}
+
+	render = (now: DOMHighResTimeStamp) => {
+		now *= 0.001;
+		this.dt = now - this.then;
+		this.uniforms.time.value += this.dt;
+		// console.log(this.uniforms.time.value);
+		// console.log(this.time);
+		
+		this.animationFunction(this.dt);
+		this.then = now;
+		this.drawScene(this.programInfo, this.Buffers);
+		requestAnimationFrame(this.render);
+	}
+
+	loop = (func: (dt: number) => void) => {
+		this.animationFunction = func;
+	}
+
+	fetchCurrentFPS = () => {
+		return 1/this.dt;
+	}
 }
 
+export {Vec3, Camera, Uniform}
 export default WebGel;

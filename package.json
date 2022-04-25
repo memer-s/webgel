@@ -12,6 +12,8 @@
     "vite": "^2.9.5"
   },
   "dependencies": {
+    "@types/codemirror": "^5.60.5",
+    "codemirror": "^5.65.3",
     "gl-matrix": "^3.4.3"
   }
 }
