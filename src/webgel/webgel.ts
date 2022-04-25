@@ -1,5 +1,4 @@
 import { mat4 } from 'gl-matrix';
-import { stringify } from 'querystring';
 // SOURCES: https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Tutorial
 // Author: memer-s
 
@@ -15,6 +14,16 @@ class Vec3 {
 	}
 }
 
+class Vec2 {
+	x: number;
+	y: number;
+
+	constructor(x:number, y:number) {
+		this.x = x;
+		this.y = y;
+	}
+}
+
 class WObject {
 	position: Vec3;
 	constructor(pos: Vec3) {
@@ -26,6 +35,39 @@ class WObject {
 class Camera extends WObject {
 	constructor(pos: Vec3) {
 		super(pos);
+	}
+}
+
+class Cube extends WObject {
+	width: number;
+	height: number;
+	segments: number;
+	
+	constructor(pos: Vec3, size: Vec2, segments: number) {
+		super(pos)
+		this.width = size.x;
+		this.height = size.y;
+		this.segments = segments;
+	}
+
+	getVertices = () => {
+		let verts: Array = [];
+		for(let i = 0; i < this.segments; i++) {
+			for(let j = 0; j < this.segments; j++) {
+				this.addVertPos(verts, this.position.x + (this.width/this.segments)*i    , this.position.y+(this.width/this.segments)*j);
+				this.addVertPos(verts, this.position.x + (this.width/this.segments)*(i+1), this.position.y+(this.width/this.segments)*j);
+				this.addVertPos(verts, this.position.x + (this.width/this.segments)*(i+1), this.position.y+(this.width/this.segments)*(j+1));
+
+				this.addVertPos(verts, this.position.x + (this.width/this.segments)*i    , this.position.y+(this.width/this.segments)*j);
+				this.addVertPos(verts, this.position.x + (this.width/this.segments)*i    , this.position.y+(this.width/this.segments)*(j+1));
+				this.addVertPos(verts, this.position.x + (this.width/this.segments)*(i+1), this.position.y+(this.width/this.segments)*(j+1));
+			}
+		}
+		return verts;
+	}
+
+	addVertPos = (arr: Array, x: number,y: number) => {
+		arr.push(x); arr.push(y);
 	}
 }
 
@@ -126,23 +168,35 @@ class WebGel {
 		// Now pass the list of positions into WebGL to build the
 		// shape. We do this by creating a Float32Array from the
 		// JavaScript array, then use it to fill the current buffer.
-		const positions = [
-			1.0, 1.0,
-			-1.0, 1.0,
-			1.0, -1.0,
-			-1.0, -1.0,
-		];
+
+		
+		const cube = new Cube(new Vec3(0,0,0), new Vec2(2,2), 10)
+
+		const positions = cube.getVertices()
+		console.log(positions);
+		
+		// const positions = [
+		// -1.0, -1.0,
+		// 	1.0, -1.0,
+		// 	-1.0, 1.0,
+
+		// 	-1.0, 1.0,
+		// 	1.0, -1.0,
+		// 	1.0, 1.0,
+		// ];
 
 		this.gl.bufferData(this.gl.ARRAY_BUFFER,
 			new Float32Array(positions),
 			this.gl.STATIC_DRAW);
 
-		const colors = [
-			1.0,  1.0,  1.0,  1.0,    // white
-			1.0,  0.0,  0.0,  1.0,    // red
-			0.0,  1.0,  0.0,  1.0,    // green
-			0.0,  0.0,  1.0,  1.0,    // blue
-		];
+		let colors = [];
+		for(let i = 0; i < 600; i++) {
+			for(let _ = 0; _ < 3; _++)
+			{
+				colors.push(1.0);
+			}
+			colors.push(1.0);
+		}
 
 		const colorBuffer = this.gl.createBuffer();
 		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, colorBuffer);
@@ -314,8 +368,8 @@ class WebGel {
 
 		{
 			const offset = 0;
-			const vertexCount = 4;
-			this.gl.drawArrays(this.gl.TRIANGLE_STRIP, offset, vertexCount);
+			const vertexCount = 2000;
+			this.gl.drawArrays(this.gl.TRIANGLES, offset, vertexCount);
 		}
 	}
 
@@ -341,5 +395,5 @@ class WebGel {
 	}
 }
 
-export {Vec3, Camera, Uniform}
+export {Vec2, Vec3, Camera, Uniform, Cube}
 export default WebGel;
