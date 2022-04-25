@@ -1,7 +1,7 @@
 export default `
 
-attribute vec4 aVertexPosition;
-attribute vec4 aVertexColor;
+attribute vec4 vPosition;
+attribute vec4 vertexColor;
 
 varying lowp vec4 vColor;
 varying lowp vec4 vPos;
@@ -14,15 +14,15 @@ uniform mat4 uProjectionMatrix;
 
 vec4 pos() {
     return vec4(
-        aVertexPosition.x-1.0,
-        aVertexPosition.y+0.2*sin(random*time+aVertexPosition.x)-1.,
-        aVertexPosition.z,
+        vPosition.x,
+        vPosition.y+0.2*sin(random*time+vPosition.x),
+        vPosition.z,
     1);
 }
 
 void main() {
-    vPos = aVertexPosition;
-    vColor = aVertexColor;
+    vPos = vPosition;
+    vColor = vertexColor;
     vTime = time;
     gl_Position = uProjectionMatrix * uModelViewMatrix * pos();
 }

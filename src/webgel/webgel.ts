@@ -1,84 +1,10 @@
 import { mat4 } from 'gl-matrix';
+import { Renderer } from './renderer';
+import { Vec3, Vec2, WObject, Camera, Cube, Uniform } from './types';
+import {normalMaterial} from './material';
+
 // SOURCES: https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Tutorial
 // Author: memer-s
-
-class Vec3 {
-	x: number
-	y: number
-	z: number
-
-	constructor(x: number, y:number, z: number) {
-		this.x = x;
-		this.y = y;
-		this.z = z;
-	}
-}
-
-class Vec2 {
-	x: number;
-	y: number;
-
-	constructor(x:number, y:number) {
-		this.x = x;
-		this.y = y;
-	}
-}
-
-class WObject {
-	position: Vec3;
-	constructor(pos: Vec3) {
-		this.position = pos;
-	}
-}
-
-
-class Camera extends WObject {
-	constructor(pos: Vec3) {
-		super(pos);
-	}
-}
-
-class Cube extends WObject {
-	width: number;
-	height: number;
-	segments: number;
-	
-	constructor(pos: Vec3, size: Vec2, segments: number) {
-		super(pos)
-		this.width = size.x;
-		this.height = size.y;
-		this.segments = segments;
-	}
-
-	getVertices = () => {
-		let verts: Array = [];
-		for(let i = 0; i < this.segments; i++) {
-			for(let j = 0; j < this.segments; j++) {
-				this.addVertPos(verts, this.position.x + (this.width/this.segments)*i    , this.position.y+(this.width/this.segments)*j);
-				this.addVertPos(verts, this.position.x + (this.width/this.segments)*(i+1), this.position.y+(this.width/this.segments)*j);
-				this.addVertPos(verts, this.position.x + (this.width/this.segments)*(i+1), this.position.y+(this.width/this.segments)*(j+1));
-
-				this.addVertPos(verts, this.position.x + (this.width/this.segments)*i    , this.position.y+(this.width/this.segments)*j);
-				this.addVertPos(verts, this.position.x + (this.width/this.segments)*i    , this.position.y+(this.width/this.segments)*(j+1));
-				this.addVertPos(verts, this.position.x + (this.width/this.segments)*(i+1), this.position.y+(this.width/this.segments)*(j+1));
-			}
-		}
-		return verts;
-	}
-
-	addVertPos = (arr: Array, x: number,y: number) => {
-		arr.push(x); arr.push(y);
-	}
-}
-
-class Uniform {
-	type: string
-	value: number
-	constructor(type: string, value: number) {
-		this.type = type,
-		this.value = value
-	}
-}
 
 class WebGel {
 	programInfo: object;
@@ -91,15 +17,13 @@ class WebGel {
 	private animationFunction: (dt: number) => void = () => {};
 	private time: number = 0.0;
 	private uniforms: object;
+	private vertexCount: number = 1024;
+	private worldObjects: Array<WObject> = [];
 
-	private vss: string;
-	private fss: string;
+	private renderer: Renderer;
 
-	constructor(canvas: any, vss: string, fss: string) {
+	constructor(canvas: any, renderer: Renderer) {
 		if (canvas === null) throw ("canvas element not found")
-
-		this.vss = vss;
-		this.fss = fss;
 
 		this.uniforms = {'time': new Uniform("float", this.time)};
 
@@ -112,53 +36,28 @@ class WebGel {
 			console.log("Webgel Successfully instantiated.");
 		}
 
+		this.renderer = renderer;
+
 		this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
 		this.gl.clear(this.gl.COLOR_BUFFER_BIT);
-		
-		this.program = this.initShaderProgram(vss, fss);
-		this.programInfo = this.getProgramInfo(this.program); 
-		this.Buffers = this.initBuffers();
+	}
+	
+	get glInstance() {
+		return this.gl;
+	}
 
+	useRenderer = (renderer: Renderer) => {
+		this.renderer;
+
+		this.program = this.renderer.initShaderProgram(vss, fss);
+		this.programInfo = this.renderer.getProgramInfo(this.program, this.uniforms); 
+		this.Buffers = this.initBuffers();
 	}
 
 	private reload = () => {
-		this.program = this.initShaderProgram(this.vss, this.fss);
-		this.programInfo = this.getProgramInfo(this.program); 
+		this.program = this.renderer.initShaderProgram(this.vss, this.fss);
+		this.programInfo = this.renderer.getProgramInfo(this.program, this.uniforms); 
 		this.Buffers = this.initBuffers();
-	}
-
-	private initShaderProgram = (vsSource: string, fsSource: string) => {
-		const vertexShader = this.loadShader(this.gl.VERTEX_SHADER, vsSource);
-		const fragmentShader = this.loadShader(this.gl.FRAGMENT_SHADER, fsSource);
-
-		const shaderProgram = this.gl.createProgram();
-		if (shaderProgram === null) throw ("Could not create shader program.");
-		this.gl.attachShader(shaderProgram, vertexShader);
-		this.gl.attachShader(shaderProgram, fragmentShader);
-		this.gl.linkProgram(shaderProgram);
-
-		if (!this.gl.getProgramParameter(shaderProgram, this.gl.LINK_STATUS)) {
-			throw ("Could not initialize shaderProgram" + this.gl.getProgramInfoLog(shaderProgram));
-		}
-
-		return shaderProgram;
-	}
-
-	private loadShader = (type: any, source: string) => {
-		const shader: WebGLShader | null = this.gl.createShader(type);
-
-		if (shader == null) throw (`Shader of type: ${type} invalid.`);
-
-		this.gl.shaderSource(shader, source);
-		this.gl.compileShader(shader);
-
-		if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
-			let errlog = "Shader could not be compiled " + this.gl.getShaderInfoLog(shader);
-			this.gl.deleteShader(shader);
-			throw (errlog);
-		}
-
-		return shader;
 	}
 
 	private initBuffers = () => {
@@ -170,7 +69,11 @@ class WebGel {
 		// JavaScript array, then use it to fill the current buffer.
 
 		
-		const cube = new Cube(new Vec3(0,0,0), new Vec2(2,2), 10)
+		const cube = new Cube(new Vec3(-2,-1,0), new Vec2(4,2), 10)
+
+		for(let i = 0; i < this.worldObjects.length; i++) {
+
+		}
 
 		const positions = cube.getVertices()
 		console.log(positions);
@@ -203,41 +106,12 @@ class WebGel {
 		this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(colors), this.gl.STATIC_DRAW)
 
 
-
 		return {
 			position: positionBuffer,
 			color: colorBuffer
 		};
 	}
 
-	useCamera(camera: Camera) {
-		this._camera = camera;
-		requestAnimationFrame(this.render);
-	}
-
-	private getProgramInfo = (sp: WebGLProgram) => {
-		let pInfo = {
-			program: sp,
-			attribLocations: {
-				vertexPosition: this.gl.getAttribLocation(sp, 'aVertexPosition'),
-				vertexColor: this.gl.getAttribLocation(sp, "aVertexColor")
-			},
-			uniformLocations: {
-				projectionMatrix: this.gl.getUniformLocation(sp, 'uProjectionMatrix'),
-				modelViewMatrix: this.gl.getUniformLocation(sp, 'uModelViewMatrix'),
-			},
-		}
-		
-		for(let uniform in this.uniforms) {
-			let obj = (this.uniforms as any)[uniform];
-			if(obj.type === "float") {
-				(pInfo.uniformLocations as any)[uniform] = this.gl.getUniformLocation(sp, uniform)
-			}
-		}
-		console.log(pInfo);
-		
-		return pInfo;
-	}
 
 	addUniform = (key: string, uniform: Uniform) => {
 		(this.uniforms as any)[key] = uniform;
@@ -368,7 +242,7 @@ class WebGel {
 
 		{
 			const offset = 0;
-			const vertexCount = 2000;
+			const vertexCount = this.vertexCount;
 			this.gl.drawArrays(this.gl.TRIANGLES, offset, vertexCount);
 		}
 	}
@@ -376,6 +250,7 @@ class WebGel {
 	render = (now: DOMHighResTimeStamp) => {
 		now *= 0.001;
 		this.dt = now - this.then;
+		//@ts-ignore
 		this.uniforms.time.value += this.dt;
 		// console.log(this.uniforms.time.value);
 		// console.log(this.time);

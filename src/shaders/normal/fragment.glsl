@@ -6,7 +6,7 @@ varying lowp float vTime;
 
 
 void main() {
-    gl_FragColor = vec4(sin(vPos.x+vTime), sin(vPos.y+vTime), cos(vPos.x*20.), 1.0);
+    gl_FragColor = vec4(sin(vPos.x+vTime+1.58), sin(vPos.y+vTime), sin(2.0*vTime+vPos.x), 1.0);
 }
 
 `
