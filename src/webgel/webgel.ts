@@ -7,14 +7,10 @@ import {normalMaterial} from './material';
 // Author: memer-s
 
 class WebGel {
-	programInfo: object;
 	private gl: WebGLRenderingContext;
-	private program: any;
 	private Buffers: object;
-	private _camera: Camera | null = null;
 	private then: number = 0;
 	private dt: number = 0;
-	private animationFunction: (dt: number) => void = () => {};
 	private time: number = 0.0;
 	private uniforms: object;
 	private vertexCount: number = 1024;
@@ -22,7 +18,7 @@ class WebGel {
 
 	private renderer: Renderer;
 
-	constructor(canvas: any, renderer: Renderer) {
+	constructor(canvas: any) {
 		if (canvas === null) throw ("canvas element not found")
 
 		this.uniforms = {'time': new Uniform("float", this.time)};
@@ -36,8 +32,6 @@ class WebGel {
 			console.log("Webgel Successfully instantiated.");
 		}
 
-		this.renderer = renderer;
-
 		this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
 		this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 	}
@@ -47,81 +41,63 @@ class WebGel {
 	}
 
 	useRenderer = (renderer: Renderer) => {
-		this.renderer;
+		this.renderer = renderer;
 
-		this.program = this.renderer.initShaderProgram(vss, fss);
-		this.programInfo = this.renderer.getProgramInfo(this.program, this.uniforms); 
-		this.Buffers = this.initBuffers();
+		// this.Buffers = this.initBuffers();
 	}
 
-	private reload = () => {
-		this.program = this.renderer.initShaderProgram(this.vss, this.fss);
-		this.programInfo = this.renderer.getProgramInfo(this.program, this.uniforms); 
-		this.Buffers = this.initBuffers();
-	}
 
-	private initBuffers = () => {
-		const positionBuffer = this.gl.createBuffer();
-		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer);
+	// private initBuffers = () => {
+	// 	const positionBuffer = this.gl.createBuffer();
+	// 	this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer);
 
-		// Now pass the list of positions into WebGL to build the
-		// shape. We do this by creating a Float32Array from the
-		// JavaScript array, then use it to fill the current buffer.
+	// 	// Now pass the list of positions into WebGL to build the
+	// 	// shape. We do this by creating a Float32Array from the
+	// 	// JavaScript array, then use it to fill the current buffer.
 
 		
-		const cube = new Cube(new Vec3(-2,-1,0), new Vec2(4,2), 10)
+	// 	// const cube = new Cube(new Vec3(-2,-1,0), new Vec2(4,2), 10)
 
-		for(let i = 0; i < this.worldObjects.length; i++) {
+	// 	for(let i = 0; i < this.worldObjects.length; i++) {
 
-		}
+	// 	}
 
-		const positions = cube.getVertices()
-		console.log(positions);
+	// 	// const positions = cube.getVertices()
+	// 	// console.log(positions);
 		
-		// const positions = [
-		// -1.0, -1.0,
-		// 	1.0, -1.0,
-		// 	-1.0, 1.0,
+	// 	// const positions = [
+	// 	// -1.0, -1.0,
+	// 	// 	1.0, -1.0,
+	// 	// 	-1.0, 1.0,
 
-		// 	-1.0, 1.0,
-		// 	1.0, -1.0,
-		// 	1.0, 1.0,
-		// ];
+	// 	// 	-1.0, 1.0,
+	// 	// 	1.0, -1.0,
+	// 	// 	1.0, 1.0,
+	// 	// ];
 
-		this.gl.bufferData(this.gl.ARRAY_BUFFER,
-			new Float32Array(positions),
-			this.gl.STATIC_DRAW);
+	// 	this.gl.bufferData(this.gl.ARRAY_BUFFER,
+	// 		new Float32Array(positions),
+	// 		this.gl.STATIC_DRAW);
 
-		let colors = [];
-		for(let i = 0; i < 600; i++) {
-			for(let _ = 0; _ < 3; _++)
-			{
-				colors.push(1.0);
-			}
-			colors.push(1.0);
-		}
+	// 	let colors = [];
+	// 	for(let i = 0; i < 600; i++) {
+	// 		for(let _ = 0; _ < 3; _++)
+	// 		{
+	// 			colors.push(1.0);
+	// 		}
+	// 		colors.push(1.0);
+	// 	}
 
-		const colorBuffer = this.gl.createBuffer();
-		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, colorBuffer);
-		this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(colors), this.gl.STATIC_DRAW)
-
-
-		return {
-			position: positionBuffer,
-			color: colorBuffer
-		};
-	}
+	// 	const colorBuffer = this.gl.createBuffer();
+	// 	this.gl.bindBuffer(this.gl.ARRAY_BUFFER, colorBuffer);
+	// 	this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(colors), this.gl.STATIC_DRAW)
 
 
-	addUniform = (key: string, uniform: Uniform) => {
-		(this.uniforms as any)[key] = uniform;
-		console.log(this.uniforms);
-		this.reload()
-	}
-
-	updateUniform = (key: string, value: number) => {
-		(this.uniforms as any)[key].value = value;
-	}
+	// 	return {
+	// 		position: positionBuffer,
+	// 		color: colorBuffer
+	// 	};
+	// }
 
 	private drawScene = (programInfo: any, buffers: any) => {
 		this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -247,22 +223,8 @@ class WebGel {
 		}
 	}
 
-	render = (now: DOMHighResTimeStamp) => {
-		now *= 0.001;
-		this.dt = now - this.then;
-		//@ts-ignore
-		this.uniforms.time.value += this.dt;
-		// console.log(this.uniforms.time.value);
-		// console.log(this.time);
-		
-		this.animationFunction(this.dt);
-		this.then = now;
-		this.drawScene(this.programInfo, this.Buffers);
-		requestAnimationFrame(this.render);
-	}
-
 	loop = (func: (dt: number) => void) => {
-		this.animationFunction = func;
+		this.renderer.useLoop(func)
 	}
 
 	fetchCurrentFPS = () => {

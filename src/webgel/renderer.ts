@@ -1,23 +1,84 @@
-import { Uniform, Camera } from "./types";
-import { normalMaterial, shaderMaterial } from "./material";
+import { Uniform, Camera, WObject } from "./types";
+import { normalMaterial, shaderMaterial, Material } from "./material";
 import { mat4 } from 'gl-matrix';
+
+interface Programs {
+	[key: string]: any
+}
 
 class Renderer {
 	gl: WebGLRenderingContext;
 	currentMaterial: string = "";
-	_camera: Camera;
+
+	_camera: Camera | null = null;
+	_loop: (dt: number) => void;
+	dt: number = 0;
+	then: number = 0;
+
+	programs: Programs;
+	objects: Array<WObject>;
 
 	constructor(gl: WebGLRenderingContext) {
 		this.gl = gl;
+		this._loop = (dt) => {
+		};
+		this.programs = {};
+		this.objects = [];
 	}
+	
+	addObject = (obj: WObject) => {
+		let material = this.compileShaderProgram(obj.getMaterial());
+		this.programs[obj.getMaterial().name] = material;
+		console.log(this.programs);
+	};
 
 	useCamera = (camera: Camera) => {
 		this._camera = camera;
-		requestAnimationFrame(this.render);
 	}
 
 	useMaterial = (material: normalMaterial | shaderMaterial) => {
 		this.currentMaterial = material.name;
+	}
+
+	useLoop = (func: any) => {
+		this._loop = func;
+	}
+
+	render = (now: DOMHighResTimeStamp) => {
+		now *= 0.001;
+		this.dt = now - this.then;
+		//@ts-ignore
+		this.uniforms.time.value += this.dt;
+		// console.log(this.uniforms.time.value);
+		// console.log(this.time);
+		
+		this._loop(this.dt);
+		this.then = now;
+		this.drawScene(this.programInfo, this.Buffers);
+		requestAnimationFrame(this.render);
+	}
+
+	addUniform = (key: string, uniform: Uniform) => {
+		(this.uniforms as any)[key] = uniform;
+		console.log(this.uniforms);
+		this.reload()
+	}
+
+	updateUniform = (key: string, value: number) => {
+		(this.uniforms as any)[key].value = value;
+	}
+
+	private reload = () => {
+		// this.program = this.renderer.initShaderProgram(this.vss, this.fss);
+		// this.programInfo = this.renderer.getProgramInfo(this.program, this.uniforms); 
+		// this.Buffers = this.initBuffers();
+	}
+
+	compileShaderProgram = (material: Material) => {
+		console.log(material.name);
+		let shaderProgram = this.initShaderProgram(material.getVsSource(), material.getFsSource());
+		
+		return shaderProgram;
 	}
 
 	initShaderProgram = (vsSource: string, fsSource: string) => {
@@ -92,36 +153,23 @@ class Renderer {
 		const zFar = 100.0;
 		const projectionMatrix = mat4.create();
 	
-		// note: glmatrix.js always has the first argument
-		// as the destination to receive the result.
 		mat4.perspective(projectionMatrix,
 			fieldOfView,
 			aspect,
 			zNear,
 			zFar);
 	
-		// Set the drawing position to the "identity" point, which is
-		// the center of the scene.
 		const modelViewMatrix = mat4.create();
 	
-		// Now move the drawing position a bit to where we want to
-		// start drawing the square.
 		if(this._camera)
-		mat4.translate(modelViewMatrix,     // destination matrix
-			modelViewMatrix,     // matrix to translate
+		mat4.translate(modelViewMatrix,
+			modelViewMatrix,
 			[this._camera.position.x, this._camera.position.y, this._camera.position.z]
-		);  // amount to translate
-		else {
-			console.error("No camera inited.");
-			
-			mat4.translate(modelViewMatrix,     // destination matrix
-				modelViewMatrix,     // matrix to translate
-				[0, 0, -5]
-			);  // amount to translate
+		);
+		else { console.error("No camera initialized."); mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, -5]); }
+		for(let i = 0; i < this.objects.length; i++) {
+
 		}
-	
-		// Tell WebGL how to pull out the positions from the position
-		// buffer into the vertexPosition attribute.
 		{
 			const numComponents = 2;  // pull out 2 values per iteration
 			const type = this.gl.FLOAT;    // the data in the buffer is 32bit floats

@@ -1,26 +1,38 @@
 //@ts-ignore
-import normalVSource from './shaders/normal/vertex.glsl'
+import normalVSource from './../shaders/normal/vertex.glsl'
 //@ts-ignore
-import normalFSource from './shaders/normal/fragment.glsl'
+import normalFSource from './../shaders/normal/fragment.glsl'
 
-class normalMaterial {
-	name: string = "normal";
-	vsSource = normalVSource;
-	fsSource = normalFSource;
-	
-	constructor() {
-
-	}
-}
-
-class shaderMaterial {
-	name: string = "shader";
+class Material {
 	vsSource: string;
 	fsSource: string;
-	constructor(vsSource: string, fsSource: string) {
-		this.vsSource = vsSource;
-		this.fsSource = fsSource;
+
+	constructor(vs: string, fs: string) {
+		this.vsSource = vs;
+		this.fsSource = fs;
+	}
+
+	public getVsSource = () => {
+		return this.vsSource;
+	}
+
+	public getFsSource = () => {
+		return this.fsSource;
 	}
 }
 
-export { shaderMaterial, normalMaterial }
+class normalMaterial extends Material {
+	name: string = "normal";
+	constructor() {
+		super(normalVSource, normalFSource)
+	}
+}
+
+class shaderMaterial extends Material {
+	name: string = "shader";
+	constructor(vsSource: string, fsSource: string) {
+		super(vsSource, fsSource);
+	}
+}
+
+export { shaderMaterial, normalMaterial, Material }

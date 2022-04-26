@@ -1,3 +1,5 @@
+import {normalMaterial, shaderMaterial} from './material';
+
 class Vec3 {
 	x: number
 	y: number
@@ -22,8 +24,19 @@ class Vec2 {
 
 class WObject {
 	position: Vec3;
+	//@ts-ignore
+	private material: normalMaterial | shaderMaterial;
+
 	constructor(pos: Vec3) {
 		this.position = pos;
+	}
+
+	setMaterial = (mat: normalMaterial | shaderMaterial) => {
+		this.material = mat;
+	}
+
+	getMaterial = () => {
+		return this.material;
 	}
 }
 
@@ -38,7 +51,8 @@ class Cube extends WObject {
 	width: number;
 	height: number;
 	segments: number;
-	
+	uniforms: any;
+
 	constructor(pos: Vec3, size: Vec2, segments: number) {
 		super(pos)
 		this.width = size.x;
