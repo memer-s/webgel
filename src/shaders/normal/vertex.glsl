@@ -15,7 +15,7 @@ uniform mat4 uProjectionMatrix;
 vec4 pos() {
     return vec4(
         vPosition.x,
-        vPosition.y+0.2*sin(random*time+vPosition.x),
+        vPosition.y+0.2*sin(time+vPosition.x),
         vPosition.z,
     1);
 }
