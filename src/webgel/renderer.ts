@@ -1,5 +1,5 @@
 import { Camera, WObject } from "./objects";
-import { normalMaterial, shaderMaterial, standardMaterial, Material } from "./material";
+import { standardMaterial, Material } from "./material";
 import { mat4, vec3 } from 'gl-matrix';
 
 interface Programs {
@@ -24,10 +24,12 @@ class Renderer {
 
 	programs: Programs;
 	objects: WorldObjects;
+	renderMethod: any;
 
 	constructor(gl: WebGLRenderingContext) {
 		this.gl = gl;
-		this._loop = (dt) => {
+		this.renderMethod = gl.TRIANGLES;
+		this._loop = () => {
 		};
 		this.programs = {};
 		this.objects = {};
@@ -54,6 +56,11 @@ class Renderer {
 		}
 
 		obj.setId(id);
+
+		obj.setRemove(() => {
+			delete this.objects[id];
+		})
+
 		console.log(`Object added with id ${id}`);
 	};
 
@@ -68,21 +75,11 @@ class Renderer {
 	render = (now: DOMHighResTimeStamp) => {
 		now *= 0.001;
 		this.dt = now - this.then;
-		//@ts-ignore
-		// this.uniforms.time.value += this.dt;
-		// console.log(this.uniforms.time.value);
-		// console.log(this.time);
 		
+		this.drawScene();
 		this._loop(this.dt);
 		this.then = now;
-		this.drawScene();
 		requestAnimationFrame(this.render);
-	}
-
-	private reload = () => {
-		// this.program = this.renderer.initShaderProgram(this.vss, this.fss);
-		// this.programInfo = this.renderer.getProgramInfo(this.program, this.uniforms); 
-		// this.Buffers = this.initBuffers();
 	}
 
 	compileShaderProgram = (material: Material) => {
@@ -97,14 +94,14 @@ class Renderer {
 		const program = this.programs[obj.getMaterial().name];
 		this.gl.vertexAttribPointer(
 			this.gl.getAttribLocation(program, 'vPosition'),
-			2,
+			3,
 			this.gl.FLOAT,
 			false,
 			0,
 			0
 		);
 		this.gl.enableVertexAttribArray(program)
-		this.gl.drawArrays(this.gl.LINES, 0, this.objects[obj.getId()].object.getVertices().length)
+		this.gl.drawArrays(this.renderMethod, 0, this.objects[obj.getId()].object.getVertices().length/3)
 	}
 
 	initShaderProgram = (vsSource: string, fsSource: string) => {
@@ -162,33 +159,42 @@ class Renderer {
 			zFar
 		);
 			
-		const modelViewMatrix = mat4.create();
+		let modelViewMatrix = mat4.create();
+
+		mat4.rotateX(projectionMatrix, projectionMatrix, 0.436332)
 		
-		if(this._camera)
-		mat4.translate(modelViewMatrix,
-			modelViewMatrix,
-			[this._camera.position.x, this._camera.position.y, this._camera.position.z]
-		);
-	
-		else { console.error("No camera initialized."); mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, -5]); }
-	
-
-
+		
+		
+		
 		for(const obj in this.objects) {
 			// console.log(this.objects[obj]);
 			const program = this.programs[this.objects[obj].object.getMaterial().name]
+			const object = this.objects[obj].object;
 			this.gl.useProgram(program);
-
+			
 			this.gl.uniformMatrix4fv(
 				this.gl.getUniformLocation(program, 'uProjectionMatrix'),
 				false,
 				projectionMatrix
-			);
+				);
+				
+				// console.log(mat4.getTranslation(vec3.create(), modelViewMatrix)) --> [0,0,-6]
+				
+			let calculatedMVM = mat4.clone(this.objects[obj].object.getModelViewMatrix())
 			
-			// console.log(mat4.getTranslation(vec3.create(), modelViewMatrix)) --> [0,0,-6]
+			if(this._camera)
+			mat4.translate(
+				calculatedMVM,
+				calculatedMVM,
+				[this._camera.position.x, this._camera.position.y, this._camera.position.z]
+			);
+			else { console.error("No camera initialized."); mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, -5]); }
+			
+			mat4.rotate(calculatedMVM, calculatedMVM, object.rotation.x, [1,0,0])
+			mat4.rotate(calculatedMVM, calculatedMVM, object.rotation.y, [0,1,0])
+			mat4.rotate(calculatedMVM, calculatedMVM, object.rotation.z, [0,0,1])
 
-			let calculatedMVM = mat4.create()
-			mat4.translate(calculatedMVM, this.objects[obj].object.getModelViewMatrix(), mat4.getTranslation(vec3.create(), modelViewMatrix))
+			// mat4.translate(calculatedMVM, this.objects[obj].object.getModelViewMatrix(), mat4.getTranslation(vec3.create(), modelViewMatrix))
 			
 			this.gl.uniformMatrix4fv(
 				this.gl.getUniformLocation(program, 'uModelViewMatrix'),
@@ -211,74 +217,6 @@ class Renderer {
 			this.drawObject(this.objects[obj].object)
 		}
 
-
-		// {
-		// 	const numComponents = 2;  // pull out 2 values per iteration
-		// 	const type = this.gl.FLOAT;    // the data in the buffer is 32bit floats
-		// 	const normalize = false;  // don't normalize
-		// 	const stride = 0;         // how many bytes to get from one set of values to the next
-		// 	// 0 = use type and numComponents above
-		// 	const offset = 0;         // how many bytes inside the buffer to start from
-		// 	this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffers.position);
-		// 	this.gl.vertexAttribPointer(
-		// 		programInfo.attribLocations.vertexPosition,
-		// 		numComponents,
-		// 		type,
-		// 		normalize,
-		// 		stride,
-		// 		offset
-		// 	);
-	
-		// 	this.gl.enableVertexAttribArray(
-		// 		programInfo.attribLocations.vertexPosition
-		// 	);
-		// }
-	
-		// {
-		// 	const numComponents = 4;
-		// 	const type = this.gl.FLOAT;
-		// 	const normalize = false;
-		// 	const stride = 0;
-		// 	const offset = 0;
-		// 	this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffers.color);
-		// 	this.gl.vertexAttribPointer(
-		// 		programInfo.attribLocations.vertexColor,
-		// 		numComponents,
-		// 		type,
-		// 		normalize,
-		// 		stride,
-		// 		offset);
-		// 	this.gl.enableVertexAttribArray(
-		// 		programInfo.attribLocations.vertexColor
-		// 	);
-		// }
-	
-		// // Tell WebGL to use our program when drawing
-	
-		// this.gl.useProgram(programInfo.program);
-	
-		// // Set the shader uniforms
-	
-	
-		
-		// {		
-		// 	for(let uniform in this.uniforms) {
-		// 		let obj = (this.uniforms as any)[uniform];
-		// 		if(obj.type === "float") {
-		// 			this.gl.uniform1f(
-		// 				programInfo.uniformLocations[uniform],
-		// 				obj.value,
-		// 			)
-		// 		}
-		// 	}
-		// }
-		
-	
-		// {
-		// 	const offset = 0;
-		// 	const vertexCount = this.vertexCount;
-		// 	this.gl.drawArrays(this.gl.TRIANGLES, offset, vertexCount);
-		// }
 	}
 
 }

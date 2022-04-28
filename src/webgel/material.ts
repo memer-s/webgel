@@ -7,6 +7,11 @@ import standardVSource from './../shaders/standard/vertex.glsl'
 //@ts-ignore
 import standardFSource from './../shaders/standard/fragment.glsl'
 
+//@ts-ignore
+import textureVSource from './../shaders/texture/vertex.glsl'
+//@ts-ignore
+import textureFSource from './../shaders/texture/fragment.glsl'
+
 interface Uniform {
 	uniformName: string,
 	type: string,
@@ -18,12 +23,14 @@ class Material {
 	private fsSource: string;
 	private uniforms: Array<Uniform> = [];
 	name: string;
-
-	constructor(vs: string, fs: string, name: string, uniforms: Array<Uniform> = []) {
+	isTexture: boolean;
+	
+	constructor(vs: string, fs: string, name: string, uniforms: Array<Uniform> = [], isTexture = false) {
 		this.vsSource = vs;
 		this.fsSource = fs;
 		this.name = name;
 		this.uniforms = uniforms;
+		this.isTexture = isTexture
 	}
 
 	public getVsSource = () => {
@@ -61,9 +68,15 @@ class standardMaterial extends Material {
 	}
 }
 
+class textureMaterial extends Material {
+	constructor() {
+		super(textureVSource, textureFSource, "texture", [], true)
+	}
+}
+
 class shaderMaterial extends Material {
-	constructor(vsSource: string, fsSource: string, name: string = "shader", uniforms: Array<Uniform>) {
-		super(vsSource, fsSource, name, uniforms);
+	constructor(vsSource: string, fsSource: string, name: string = "shader", uniforms: Array<Uniform>, isTexture: boolean = false) {
+		super(vsSource, fsSource, name, uniforms, isTexture);
 	}
 }
 

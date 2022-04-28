@@ -1,0 +1,32 @@
+.debug {
+  width: fit-content;
+  min-width: 210px;
+  position: relative;
+  margin-top: 20px;
+  margin-left: 20px;
+  padding: 10px;
+  background-color: #46464665;
+  border-radius: 3px;
+  border: 1px #4b4b4b69 solid;
+}
+
+
+.debug div {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.debug label {
+  margin-right: 16px;
+}
+
+.debug .check input {
+  width: 15px;
+  height: 15px;
+  margin-top: 3px;
+}
+
+.debug button {
+  width: 100%;
+}

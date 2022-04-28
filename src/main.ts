@@ -1,58 +1,88 @@
-import WebGel, { Vec2 } from "./webgel/webgel";
-import { Camera, Vec3, Cube } from "./webgel/webgel";
-import { normalMaterial, standardMaterial } from "./webgel/material";
-import './style.css';
-//@ts-ignore
-import vsSource from './shaders/normal/vertex.glsl'
-//@ts-ignore
-import fsSource from './shaders/normal/fragment.glsl'
+import WebGel from "./webgel/webgel";
+import {Plane, Camera, Vec3, Vec2, Cube} from './webgel/objects'
+import { normalMaterial, shaderMaterial, standardMaterial } from "./webgel/material";
 import { Renderer } from "./webgel/renderer";
-// import CodeMirror from 'codemirror';
-// import './../node_modules/codemirror/lib/codemirror.css'
-// import './../node_modules/codemirror/mode/clike/clike'
-// let cm = codemirror(document.body, {
-//   value: fsSource,
-//   theme: "clike"
-// })
+import Debug from "./webgel/debug";
+import './style.css';
+
+//@ts-ignore
+import vertex from './shaders/testing/vertex.glsl'
+//@ts-ignore
+import fragment from './shaders/testing/fragment.glsl'
+
 let canvas: any = document.getElementById("c");
 canvas.height = window.innerHeight;
 canvas.width = window.innerWidth;
 
-const fps = document.getElementById("fps");
+let deb = new Debug("Debug 1");
+let fps = deb.addDisplay("FPS: ")
 
 setInterval(() => {
   if (fps)
     if (webgel)
-      fps.innerText = webgel.fetchCurrentFPS().toPrecision(4) + " FPS"
+      fps(webgel.fetchCurrentFPS().toPrecision(4))
 }, 250)
 
-
-
-let rang: HTMLInputElement = document.getElementsByTagName("input")[0];
-rang.addEventListener("input", () => {
-  // webgel.updateUniform("random", parseFloat(rang.value))
+deb.addCheckbox("Wireframe", (e) => {
+  e.target.checked ? renderer.renderMethod = webgel.glInstance.LINES : renderer.renderMethod = webgel.glInstance.TRIANGLES;
 })
 
+let x = 1;
+deb.addRange("Speed:", (e) => {
+  x = e.target.value;
+  fuckymaterial.updateUniform("speed", x)  
+}, 0, 10, 0.003, 1);
 
-let camera = new Camera(new Vec3(0, 0, -6))
+let rotSpeed = 0.001;
+deb.addRange("Rotation speed:", (e) => {
+  console.log(rotSpeed);
+  rotSpeed = e.target.value;
+  
+}, 0, 0.1, 0.00001, 0.000001);
+
+deb.addRange("plane def:", (e) => {
+  plane.remove()
+  plane = new Plane(new Vec3(-5, -5, -16), new Vec2(10, 10), e.target.value)
+  plane.setMaterial(fuckymaterial);
+  renderer.addObject(plane);
+}, 1, 100, 1, 1);
+
+deb.addButton("Remove fuckywucky cube", () => {
+  cube.remove()
+})
+
+deb.render(document.body)
+
+let camera = new Camera(new Vec3(0,-3,-6))
 let webgel = new WebGel(canvas);
 let renderer = new Renderer(webgel.glInstance);
 webgel.useRenderer(renderer);
 
-let cube = new Cube(new Vec3(-5, 0, 0), new Vec2(10, 1), 100)
-// let cube2 = new Cube(new Vec3(-2,2,0), new Vec2(1,1), 2)
+let plane = new Plane(new Vec3(-5, -5, -16), new Vec2(10, 10), 1)
+let cube = new Cube(new Vec3(0,0,-10));
 
-let fuckymaterial = new normalMaterial()
+let fuckymaterial = new shaderMaterial(vertex, fragment, "testing", [
+  {type: "float", uniformName: "time", value: 0}, 
+  {type: "float", uniformName: "speed", value: 1}
+])
+
+let lessfuckymaterial = new standardMaterial();
+
+plane.setMaterial(fuckymaterial);
 cube.setMaterial(fuckymaterial);
-// cube2.setMaterial(new standardMaterial)
+
+renderer.addObject(plane);
 renderer.addObject(cube);
 
-// webgel.addUniform("random", new Uniform("float", Math.random()))
 renderer.useCamera(camera)
+
 
 let time = 0;
 webgel.loop((dt: number) => {
   fuckymaterial.updateUniform("time", time);
+  cube.rotate.y(parseFloat(rotSpeed))
+  
+  // plane.rotate.y(0.001)
   // cube.rotate.x(0.001)
   time += dt;
 });

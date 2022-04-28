@@ -1,5 +1,4 @@
 import { Renderer } from './renderer';
-import { Vec3, Vec2, WObject, Camera, Cube } from './objects';
 
 // SOURCES: https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Tutorial
 // Author: memer-s
@@ -44,5 +43,4 @@ class WebGel {
 	}
 }
 
-export {Vec2, Vec3, Camera, Cube}
 export default WebGel;
