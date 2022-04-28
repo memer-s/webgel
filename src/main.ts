@@ -1,9 +1,10 @@
 import WebGel from "./webgel/webgel";
 import {Plane, Camera, Vec3, Vec2, Cube} from './webgel/objects'
-import { normalMaterial, shaderMaterial, standardMaterial } from "./webgel/material";
+import { normalMaterial, shaderMaterial, standardMaterial, textureMaterial } from "./webgel/material";
 import { Renderer } from "./webgel/renderer";
 import Debug from "./webgel/debug";
 import './style.css';
+import texture from './poggers.jpg'
 
 //@ts-ignore
 import vertex from './shaders/testing/vertex.glsl'
@@ -21,7 +22,7 @@ setInterval(() => {
   if (fps)
     if (webgel)
       fps(webgel.fetchCurrentFPS().toPrecision(4))
-}, 250)
+}, 100)
 
 deb.addCheckbox("Wireframe", (e) => {
   e.target.checked ? renderer.renderMethod = webgel.glInstance.LINES : renderer.renderMethod = webgel.glInstance.TRIANGLES;
@@ -33,7 +34,7 @@ deb.addRange("Speed:", (e) => {
   fuckymaterial.updateUniform("speed", x)  
 }, 0, 10, 0.003, 1);
 
-let rotSpeed = 0.001;
+let rotSpeed = "0.001";
 deb.addRange("Rotation speed:", (e) => {
   console.log(rotSpeed);
   rotSpeed = e.target.value;
@@ -42,10 +43,10 @@ deb.addRange("Rotation speed:", (e) => {
 
 deb.addRange("plane def:", (e) => {
   plane.remove()
-  plane = new Plane(new Vec3(-5, -5, -16), new Vec2(10, 10), e.target.value)
+  plane = new Plane(new Vec3(0, -3, -6), new Vec2(10, 10), e.target.value)
   plane.setMaterial(fuckymaterial);
   renderer.addObject(plane);
-}, 1, 100, 1, 1);
+}, 5, 100, 1, 1);
 
 deb.addButton("Remove fuckywucky cube", () => {
   cube.remove()
@@ -58,8 +59,8 @@ let webgel = new WebGel(canvas);
 let renderer = new Renderer(webgel.glInstance);
 webgel.useRenderer(renderer);
 
-let plane = new Plane(new Vec3(-5, -5, -16), new Vec2(10, 10), 1)
-let cube = new Cube(new Vec3(0,0,-10));
+let plane = new Plane(new Vec3(0, -3, -6), new Vec2(10, 10), 5)
+let cube = new Cube(new Vec3(0,0,-10),1);
 
 let fuckymaterial = new shaderMaterial(vertex, fragment, "testing", [
   {type: "float", uniformName: "time", value: 0}, 
@@ -69,7 +70,7 @@ let fuckymaterial = new shaderMaterial(vertex, fragment, "testing", [
 let lessfuckymaterial = new standardMaterial();
 
 plane.setMaterial(fuckymaterial);
-cube.setMaterial(fuckymaterial);
+cube.setMaterial(lessfuckymaterial);
 
 renderer.addObject(plane);
 renderer.addObject(cube);
@@ -80,7 +81,8 @@ renderer.useCamera(camera)
 let time = 0;
 webgel.loop((dt: number) => {
   fuckymaterial.updateUniform("time", time);
-  cube.rotate.y(parseFloat(rotSpeed))
+  cube.rotate.y(parseFloat(rotSpeed)*0.1)
+  // plane.rotate.y(parseFloat(rotSpeed)*0.1)
   
   // plane.rotate.y(0.001)
   // cube.rotate.x(0.001)

@@ -15,6 +15,7 @@ class WObject {
 	private material: Material;
 	private id: number;
 	rotation: Rotation;
+	//@ts-ignore
 	private removeFunction: () => void;
 
 	constructor(pos: Vec3) {
@@ -31,6 +32,10 @@ class WObject {
 	getVertices = (): Array<number> => {
 		console.error("VERTICE DATA NOT PROVIDED.")
 		return [];
+	}
+
+	getIndices = (): Array<number> | null => {
+		return null;
 	}
 
 	setMaterial = (mat: Material) => {
@@ -104,26 +109,26 @@ class Plane extends WObject {
 		if(this.standing) {
 			for(let i = 0; i < this.segments; i++) {
 				for(let j = 0; j < this.segments; j++) {
-					this.addVertPos(verts, (this.width/this.segments)*i    , (this.height/this.segments)*j, 0);
-					this.addVertPos(verts, (this.width/this.segments)*(i+1), (this.height/this.segments)*j, 0);
-					this.addVertPos(verts, (this.width/this.segments)*(i+1), (this.height/this.segments)*(j+1), 0);
+					this.addVertPos(verts, (this.width/this.segments)*i    -this.width/2, (this.height/this.segments)*j    -this.height/2, 0);
+					this.addVertPos(verts, (this.width/this.segments)*(i+1)-this.width/2, (this.height/this.segments)*j    -this.height/2, 0);
+					this.addVertPos(verts, (this.width/this.segments)*(i+1)-this.width/2, (this.height/this.segments)*(j+1)-this.height/2, 0);
 	
-					this.addVertPos(verts, (this.width/this.segments)*i    , (this.height/this.segments)*j, 0);
-					this.addVertPos(verts, (this.width/this.segments)*i    , (this.height/this.segments)*(j+1), 0);
-					this.addVertPos(verts, (this.width/this.segments)*(i+1), (this.height/this.segments)*(j+1), 0);
+					this.addVertPos(verts, (this.width/this.segments)*i    -this.width/2, (this.height/this.segments)*j    -this.height/2, 0);
+					this.addVertPos(verts, (this.width/this.segments)*i    -this.width/2, (this.height/this.segments)*(j+1)-this.height/2, 0);
+					this.addVertPos(verts, (this.width/this.segments)*(i+1)-this.width/2, (this.height/this.segments)*(j+1)-this.height/2, 0);
 				}
 			}
 		}
 		else {
 			for(let i = 0; i < this.segments; i++) {
 				for(let j = 0; j < this.segments; j++) {
-					this.addVertPos(verts, (this.width/this.segments)*i    , 0, (this.height/this.segments)*j);
-					this.addVertPos(verts, (this.width/this.segments)*(i+1), 0, (this.height/this.segments)*j);
-					this.addVertPos(verts, (this.width/this.segments)*(i+1), 0, (this.height/this.segments)*(j+1));
+					this.addVertPos(verts, (this.width/this.segments)*i    -this.width/2, 0, (this.height/this.segments)*j    -this.height/2);
+					this.addVertPos(verts, (this.width/this.segments)*(i+1)-this.width/2, 0, (this.height/this.segments)*j    -this.height/2);
+					this.addVertPos(verts, (this.width/this.segments)*(i+1)-this.width/2, 0, (this.height/this.segments)*(j+1)-this.height/2);
 	
-					this.addVertPos(verts, (this.width/this.segments)*i    , 0, (this.height/this.segments)*j);
-					this.addVertPos(verts, (this.width/this.segments)*i    , 0, (this.height/this.segments)*(j+1));
-					this.addVertPos(verts, (this.width/this.segments)*(i+1), 0, (this.height/this.segments)*(j+1));
+					this.addVertPos(verts, (this.width/this.segments)*i    -this.width/2, 0, (this.height/this.segments)*j    -this.height/2);
+					this.addVertPos(verts, (this.width/this.segments)*i    -this.width/2, 0, (this.height/this.segments)*(j+1)-this.height/2);
+					this.addVertPos(verts, (this.width/this.segments)*(i+1)-this.width/2, 0, (this.height/this.segments)*(j+1)-this.height/2);
 				}
 			}
 		}
@@ -132,64 +137,68 @@ class Plane extends WObject {
 }
 
 class Cube extends WObject {
-	constructor(pos: Vec3) {
+	s: number;
+	constructor(pos: Vec3, size: number) {
 		super(pos);
-
+		this.s = size/2
 	}
 
 	getVertices = (): Array<number> => {
-		let verts: Array<number> = [];
-		
-		this.addVertPos(verts, 0,0,0); // Tri 1 Front
-		this.addVertPos(verts, 0,1,0);
-		this.addVertPos(verts, 1,1,0);
+		let verts: Array<number> = [
+			// Front face
+			-1.0, -1.0,  1.0,
+			1.0, -1.0,  1.0,
+			1.0,  1.0,  1.0,
+			-1.0,  1.0,  1.0,
 
-		this.addVertPos(verts, 0,0,0); // Tri 2
-		this.addVertPos(verts, 1,0,0);
-		this.addVertPos(verts, 1,1,0);
+			// Back face
+			-1.0, -1.0, -1.0,
+			-1.0,  1.0, -1.0,
+			1.0,  1.0, -1.0,
+			1.0, -1.0, -1.0,
 
-		this.addVertPos(verts, 0,0,1); // Tri 3 Back
-		this.addVertPos(verts, 0,1,1);
-		this.addVertPos(verts, 1,1,1);
+			// Top face
+			-1.0,  1.0, -1.0,
+			-1.0,  1.0,  1.0,
+			1.0,  1.0,  1.0,
+			1.0,  1.0, -1.0,
 
-		this.addVertPos(verts, 0,0,1); // Tri 4
-		this.addVertPos(verts, 1,0,1);
-		this.addVertPos(verts, 1,1,1);
+			// Bottom face
+			-1.0, -1.0, -1.0,
+			1.0, -1.0, -1.0,
+			1.0, -1.0,  1.0,
+			-1.0, -1.0,  1.0,
 
-		this.addVertPos(verts, 0,0,1); // Tri 5 Left
-		this.addVertPos(verts, 0,1,0);
-		this.addVertPos(verts, 0,1,1);
+			// Right face
+			1.0, -1.0, -1.0,
+			1.0,  1.0, -1.0,
+			1.0,  1.0,  1.0,
+			1.0, -1.0,  1.0,
 
-		this.addVertPos(verts, 0,0,0); // Tri 6
-		this.addVertPos(verts, 0,0,1);
-		this.addVertPos(verts, 0,1,0);
+			// Left face
+			-1.0, -1.0, -1.0,
+			-1.0, -1.0,  1.0,
+			-1.0,  1.0,  1.0,
+			-1.0,  1.0, -1.0,
+		];
 
-		this.addVertPos(verts, 1,1,0);
-		this.addVertPos(verts, 1,0,1); // Tri 7 Left
-		this.addVertPos(verts, 1,1,1);
-
-		this.addVertPos(verts, 1,0,0); // Tri 8
-		this.addVertPos(verts, 1,0,1);
-		this.addVertPos(verts, 1,1,0);
-
-		this.addVertPos(verts, 1,0,0); // Tri 9 Bottom
-		this.addVertPos(verts, 0,0,1);
-		this.addVertPos(verts, 1,0,1);
-
-		this.addVertPos(verts, 0,0,0); // Tri 10
-		this.addVertPos(verts, 0,0,1);
-		this.addVertPos(verts, 1,0,0);
-
-		this.addVertPos(verts, 1,1,1); // Tri 11 Top
-		this.addVertPos(verts, 1,1,0);
-		this.addVertPos(verts, 1,1,1);
-
-		this.addVertPos(verts, 1,1,0); // Tri 12
-		this.addVertPos(verts, 1,1,1);
-		this.addVertPos(verts, 0,1,0);
+		verts.forEach((el) => {
+			el = el * this.s
+		})
 		
 		return verts;
 	};
+
+	getIndices = (): Array<number> => {
+		return [
+			0,  1,  2,      0,  2,  3,    // front
+			4,  5,  6,      4,  6,  7,    // back
+			8,  9,  10,     8,  10, 11,   // top
+			12, 13, 14,     12, 14, 15,   // bottom
+			16, 17, 18,     16, 18, 19,   // right
+			20, 21, 22,     20, 22, 23,   // left
+		]
+	}
 }
 
 

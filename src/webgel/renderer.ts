@@ -1,6 +1,7 @@
 import { Camera, WObject } from "./objects";
-import { standardMaterial, Material } from "./material";
+import { standardMaterial, Material, textureMaterial } from "./material";
 import { mat4, vec3 } from 'gl-matrix';
+import { text } from "stream/consumers";
 
 interface Programs {
 	[key: string]: any
@@ -9,7 +10,11 @@ interface Programs {
 interface WorldObjects {
 	[key: number]: {
 		object: WObject,
-		vertexBuffer: WebGLBuffer,
+		buffers: {
+			vertex: WebGLBuffer,
+			indices: WebGLBuffer | undefined,
+			texture: WebGLBuffer | undefined
+		} 
 	}
 }
 
@@ -36,22 +41,69 @@ class Renderer {
 		this._renderProgram = this.compileShaderProgram(new standardMaterial())
 	}
 	
+	// Add object to world.
 	addObject = (obj: WObject) => {
 		const id = Math.floor(Math.random() * Date.now());
 
 		let material = this.compileShaderProgram(obj.getMaterial());
 		this.programs[obj.getMaterial().name] = material;
 
+		// Initialize Vertex buffer.
 		const positionBuffer = this.gl.createBuffer();
 		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer)
-
 		const positions = obj.getVertices();
 
 		this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(positions), this.gl.STATIC_DRAW)
 		if(positionBuffer !== null) {
 			this.objects[id] = {
 				object: obj,
-				vertexBuffer: positionBuffer
+				buffers: {
+					vertex: positionBuffer,
+					indices: undefined,
+					texture: undefined
+				}
+			}
+		}
+
+		// Initialize index buffer if it exists on object.
+		let indices = obj.getIndices()
+		if(indices) {
+			const indexBuffer = this.gl.createBuffer();
+			this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indexBuffer)
+			this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), this.gl.STATIC_DRAW);
+			if(indexBuffer)
+				this.objects[id].buffers.indices = indexBuffer
+			else 
+				console.error("Could not initialize index buffer.");		
+		}
+		
+		// Initialize texture	
+		let objMat = obj.getMaterial() as textureMaterial;
+		if(objMat.isTexture) {
+			const texture = this.gl.createTexture();
+			this.gl.bindTexture(this.gl.TEXTURE_2D, texture)
+			const pixel = new Uint8Array([0,0,255,255])
+			this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, 1, 1, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, pixel);
+			objMat.loadTexture((image) => {
+				this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
+				this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, image);
+				if(isPowerOf2(image.width) && isPowerOf2(image.height)) {
+					this.gl.generateMipmap(this.gl.TEXTURE_2D);
+				}
+				else {
+					this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+					this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+					this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
+				}
+			})
+
+			if(texture !== null)
+				this.objects[id].buffers.texture = texture;
+			else 
+				console.error("Could not initialize texture buffer.");
+
+			function isPowerOf2(value: number) {
+				return (value & (value - 1)) == 0;
 			}
 		}
 
@@ -61,7 +113,7 @@ class Renderer {
 			delete this.objects[id];
 		})
 
-		console.log(`Object added with id ${id}`);
+		console.log(`Object added with id ${id}`, this.objects);
 	};
 
 	useCamera = (camera: Camera) => {
@@ -72,6 +124,7 @@ class Renderer {
 		this._loop = func;
 	}
 
+	// Executed each frame.
 	render = (now: DOMHighResTimeStamp) => {
 		now *= 0.001;
 		this.dt = now - this.then;
@@ -90,7 +143,7 @@ class Renderer {
 	}
 
 	drawObject = (obj: WObject) => {
-		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.objects[obj.getId()].vertexBuffer);
+		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.objects[obj.getId()].buffers.vertex);
 		const program = this.programs[obj.getMaterial().name];
 		this.gl.vertexAttribPointer(
 			this.gl.getAttribLocation(program, 'vPosition'),
@@ -101,7 +154,24 @@ class Renderer {
 			0
 		);
 		this.gl.enableVertexAttribArray(program)
-		this.gl.drawArrays(this.renderMethod, 0, this.objects[obj.getId()].object.getVertices().length/3)
+
+		if(this.objects[obj.getId()].buffers.texture != undefined) {
+
+			this.gl.activeTexture(this.gl.TEXTURE0);
+			this.gl.bindTexture(this.gl.TEXTURE_2D, obj.getMaterial().getTexture())
+
+			console.log(this.objects[obj.getId()].buffers.texture);
+			this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.objects[obj.getId()].buffers.texture);
+			this.gl.vertexAttribPointer(this.gl.getAttribLocation(program, 'vTexture'), 2, this.gl.FLOAT, false, 0, 0);
+			this.gl.enableVertexAttribArray(this.gl.getAttribLocation(program, 'vTexture'))
+		}
+
+		if(this.objects[obj.getId()].buffers.indices) {
+			this.gl.drawElements(this.renderMethod, this.objects[obj.getId()].object.getVertices().length/2, this.gl.UNSIGNED_SHORT, 0)
+		}
+		else {
+			this.gl.drawArrays(this.renderMethod, 0, this.objects[obj.getId()].object.getVertices().length/3)
+		}
 	}
 
 	initShaderProgram = (vsSource: string, fsSource: string) => {
@@ -206,11 +276,23 @@ class Renderer {
 			);
 
 			this.objects[obj].object.getMaterial().getUniforms().forEach((el) => {
-				if(el.type === "float") {
-					//@ts-ignore
-					this.gl.uniform1f(
-						this.gl.getUniformLocation(program, el.uniformName), el.value
-					)
+				switch(el.type) {
+					case "float":
+						this.gl.uniform1f(
+							this.gl.getUniformLocation(program, el.uniformName), el.value
+						)
+						break;
+
+					case "vec3":
+						this.gl.uniform3f(
+							this.gl.getUniformLocation(program, el.uniformName), el.value.x, el.value.y, el.value.z
+						)
+						break;
+
+					case "int":
+						this.gl.uniform1i(
+							this.gl.getUniformLocation(program, el.uniformName), parseInt(el.value)
+						)
 				}
 			})
 

@@ -11,6 +11,7 @@ import standardFSource from './../shaders/standard/fragment.glsl'
 import textureVSource from './../shaders/texture/vertex.glsl'
 //@ts-ignore
 import textureFSource from './../shaders/texture/fragment.glsl'
+import { Vec3 } from './measures'
 
 interface Uniform {
 	uniformName: string,
@@ -63,14 +64,30 @@ class normalMaterial extends Material {
 }
 
 class standardMaterial extends Material {
-	constructor() {
-		super(standardVSource, standardFSource, "default")
+	constructor(color = new Vec3(0.3,0.5,0.8)) {
+		super(standardVSource, standardFSource, "default", [{uniformName: "color", type: "vec3", value: color}])
 	}
 }
 
 class textureMaterial extends Material {
-	constructor() {
+	src: string;
+	texture: WebGLTexture = undefined;
+	constructor(src: string) {
 		super(textureVSource, textureFSource, "texture", [], true)
+		this.src = src;
+	}
+
+	loadTexture(callback: (image: HTMLImageElement) => void) {
+		const image = new Image();
+		image.onload = () => {
+			this.texture = image;
+			callback(image)
+		};
+		image.src = this.src;
+	}
+
+	getTexture () {
+		return this.texture;
 	}
 }
 
@@ -80,4 +97,4 @@ class shaderMaterial extends Material {
 	}
 }
 
-export { shaderMaterial, normalMaterial, standardMaterial, Material }
+export { shaderMaterial, normalMaterial, standardMaterial, textureMaterial, Material }
