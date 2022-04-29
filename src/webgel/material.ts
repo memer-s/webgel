@@ -71,7 +71,7 @@ class standardMaterial extends Material {
 
 class textureMaterial extends Material {
 	src: string;
-	texture: WebGLTexture = undefined;
+	texture: WebGLTexture | undefined = undefined;
 	constructor(src: string) {
 		super(textureVSource, textureFSource, "texture", [], true)
 		this.src = src;

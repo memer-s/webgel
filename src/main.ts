@@ -1,3 +1,19 @@
+import OBJLoader from "./webgel/objParser";
+let objLoader = new OBJLoader();
+objLoader.load(`
+v 12 3 5
+v 2 3 4 2
+v 1337 69 42
+f 1 2 3 4 5 6 7 8
+`, (d) => {
+  console.log(d.vertices);
+  console.log(d.indices);
+})
+
+
+
+
+/*
 import WebGel from "./webgel/webgel";
 import {Plane, Camera, Vec3, Vec2, Cube} from './webgel/objects'
 import { normalMaterial, shaderMaterial, standardMaterial, textureMaterial } from "./webgel/material";
@@ -90,3 +106,5 @@ webgel.loop((dt: number) => {
 });
 
 requestAnimationFrame(renderer.render)
+
+*/
