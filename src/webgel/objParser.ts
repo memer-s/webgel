@@ -1,6 +1,8 @@
 interface ReturnObject {
 	vertices: Array<number>,
-	indices: Array<number>
+	indices: Array<number>,
+	textureCoordinates: Array<number>,
+	normals: Array<number>
 }
 
 class OBJLoader {
@@ -10,8 +12,13 @@ class OBJLoader {
 
 	load(file: string, callback: (data: ReturnObject) => void) {
 		let lines = file.split("\n");
-		let vertices: Array<number> = [];
-		let indices: Array<number> = [];
+		let OBJdata = {
+			vertices: [],
+			indices: [],
+			textureCoordinates: [],
+			normals: []
+		} as ReturnObject;
+
 		for(let i = 0; i < lines.length; i++) {
 			let line = lines[i];
 			// Do nothing if the first line is a comment.
@@ -20,21 +27,41 @@ class OBJLoader {
 				switch(values[0]) {
 					// Vertex positions.
 					case "v":
-						vertices.push(parseFloat(values[1])); // X
-						vertices.push(parseFloat(values[2])); // Y
-						vertices.push(parseFloat(values[3])); // Z
+						OBJdata.vertices.push(parseFloat(values[1])); // X
+						OBJdata.vertices.push(parseFloat(values[2])); // Y
+						OBJdata.vertices.push(parseFloat(values[3])); // Z
 						break;
 
 					// Vertex indices.
 					case "f":
-						for(let j = 0; j < values.length-1; j++) {
-							indices.push(parseInt(values[j+1]))
-						}
+						OBJdata.indices.push(parseInt(values[1]))
+						OBJdata.indices.push(parseInt(values[2]))
+						OBJdata.indices.push(parseInt(values[3]))
+						// OBJdata.indices.push(parseInt(values[4]))
+						// for(let j = 0; j < values.length-1; j++) {
+						// 	let splitValues = values[j+1].split('/')
+						// 	OBJdata.indices.push(parseInt(splitValues[0]))
+						// 	OBJdata.indices.push(parseInt(splitValues[1]))
+						// 	OBJdata.indices.push(parseInt(splitValues[2]))
+						// }
+						break;
+					
+					// Texture coords.
+					case "vt":
+						OBJdata.textureCoordinates.push(parseFloat(values[1]))
+						OBJdata.textureCoordinates.push(parseFloat(values[2]))
+						break;
+
+					// Vertex normals.
+					case "vn":
+						OBJdata.normals.push(parseFloat(values[1]))
+						OBJdata.normals.push(parseFloat(values[2]))
+						OBJdata.normals.push(parseFloat(values[3]))
 						break;
 				}
 			}
 		}
-		callback({vertices: vertices, indices: indices});
+		callback(OBJdata);
 	}
 }
 

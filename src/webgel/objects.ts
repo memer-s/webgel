@@ -1,6 +1,14 @@
 import {Material, normalMaterial, shaderMaterial} from './material';
 import { mat4, vec3 } from 'gl-matrix';
 import { Vec3, Vec2 } from './measures'
+import { ReturnObject } from './objParser'
+
+interface ReturnObject {
+	vertices: Array<number>,
+	indices: Array<number>,
+	textureCoordinates: Array<number>,
+	normals: Array<number>
+}
 
 interface Rotation {
 	x: number,
@@ -36,6 +44,11 @@ class WObject {
 
 	getIndices = (): Array<number> | null => {
 		return null;
+	}
+
+	getTextureCoords = (): Array<number> => {
+		console.error("TEXTURE COORDINATES NOT PROVIDED");
+		return [];
 	}
 
 	setMaterial = (mat: Material) => {
@@ -199,9 +212,66 @@ class Cube extends WObject {
 			20, 21, 22,     20, 22, 23,   // left
 		]
 	}
+
+	getTextureCoords = () => {
+		return [
+			// Front
+			0.0,  0.0,
+			1.0,  0.0,
+			1.0,  1.0,
+			0.0,  1.0,
+			// Back
+			0.0,  0.0,
+			1.0,  0.0,
+			1.0,  1.0,
+			0.0,  1.0,
+			// Top
+			0.0,  0.0,
+			1.0,  0.0,
+			1.0,  1.0,
+			0.0,  1.0,
+			// Bottom
+			0.0,  0.0,
+			1.0,  0.0,
+			1.0,  1.0,
+			0.0,  1.0,
+			// Right
+			0.0,  0.0,
+			1.0,  0.0,
+			1.0,  1.0,
+			0.0,  1.0,
+			// Left
+			0.0,  0.0,
+			1.0,  0.0,
+			1.0,  1.0,
+			0.0,  1.0,
+		]
+	}
+}
+
+class Custom extends WObject {
+	model: ReturnObject;
+
+	constructor(pos: Vec3, modelData: ReturnObject) {
+		super(pos);
+		this.model = modelData;
+	}
+
+	getVertices = () => {
+		return this.model.vertices
+	}
+
+	getIndices = () => {
+		return this.model.indices
+	}
+
+	getTextureCoords = () => {
+		return this.model.textureCoordinates
+	}
+	
+
 }
 
 
-
-export {Vec3, Vec2, WObject, Camera}
+export {Vec3, Vec2, WObject, Camera, Custom}
 export {Plane, Cube}

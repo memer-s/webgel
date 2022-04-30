@@ -1,7 +1,6 @@
 import { Camera, WObject } from "./objects";
 import { standardMaterial, Material, textureMaterial } from "./material";
-import { mat4, vec3 } from 'gl-matrix';
-import { text } from "stream/consumers";
+import { mat4 } from 'gl-matrix';
 
 interface Programs {
 	[key: string]: any
@@ -13,8 +12,9 @@ interface WorldObjects {
 		buffers: {
 			vertex: WebGLBuffer,
 			indices: WebGLBuffer | undefined,
-			texture: WebGLBuffer | undefined
-		} 
+			textureCoords: WebGLBuffer | undefined | null,
+		}
+		texture: WebGLTexture | undefined
 	}
 }
 
@@ -60,10 +60,13 @@ class Renderer {
 				buffers: {
 					vertex: positionBuffer,
 					indices: undefined,
-					texture: undefined
-				}
+					textureCoords: undefined
+				},
+				texture: undefined
 			}
 		}
+		
+		obj.setId(id);
 
 		// Initialize index buffer if it exists on object.
 		let indices = obj.getIndices()
@@ -80,34 +83,18 @@ class Renderer {
 		// Initialize texture	
 		let objMat = obj.getMaterial() as textureMaterial;
 		if(objMat.isTexture) {
-			const texture = this.gl.createTexture();
-			this.gl.bindTexture(this.gl.TEXTURE_2D, texture)
-			const pixel = new Uint8Array([0,0,255,255])
-			this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, 1, 1, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, pixel);
-			objMat.loadTexture((image) => {
-				this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
-				this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, image);
-				if(isPowerOf2(image.width) && isPowerOf2(image.height)) {
-					this.gl.generateMipmap(this.gl.TEXTURE_2D);
-				}
-				else {
-					this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
-					this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
-					this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
-				}
-			})
-
-			if(texture !== null)
-				this.objects[id].buffers.texture = texture;
-			else 
-				console.error("Could not initialize texture buffer.");
-
-			function isPowerOf2(value: number) {
-				return (value & (value - 1)) == 0;
-			}
+			this.getTexture(obj);
+			const textureCoordBuffer = this.gl.createBuffer();
+			this.gl.bindBuffer(this.gl.ARRAY_BUFFER, textureCoordBuffer)
+			const textureCoordinates = obj.getTextureCoords();
+			this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), this.gl.STATIC_DRAW);
+			if(textureCoordBuffer)
+				this.objects[id].buffers.textureCoords = textureCoordBuffer;
+			else
+				console.error("Could not initialize textureCoordBuffer.");
+				
 		}
 
-		obj.setId(id);
 
 		obj.setRemove(() => {
 			delete this.objects[id];
@@ -115,6 +102,38 @@ class Renderer {
 
 		console.log(`Object added with id ${id}`, this.objects);
 	};
+
+	getTexture = (obj: WObject) => {
+		const texture = this.gl.createTexture();
+		this.gl.bindTexture(this.gl.TEXTURE_2D, texture)
+		const pixel = new Uint8Array([0,0,255,255])
+		this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, 1, 1, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, pixel);
+
+		let objMat = obj.getMaterial() as textureMaterial;
+
+		objMat.loadTexture((image) => {
+			this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
+			this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, image);
+			if(isPowerOf2(image.width) && isPowerOf2(image.height)) {
+				this.gl.generateMipmap(this.gl.TEXTURE_2D);
+			}
+			else {
+				this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+				this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+				this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
+			}
+		})
+
+		console.log(this.objects[obj.getId()]);
+		if(texture !== null)
+			this.objects[obj.getId()].texture = texture;
+		else 
+			console.error("Could not initialize texture.");
+
+		function isPowerOf2(value: number) {
+			return (value & (value - 1)) == 0;
+		}
+	}
 
 	useCamera = (camera: Camera) => {
 		this._camera = camera;
@@ -153,21 +172,36 @@ class Renderer {
 			0,
 			0
 		);
+
 		this.gl.enableVertexAttribArray(program)
 
-		if(this.objects[obj.getId()].buffers.texture != undefined) {
+		if(this.objects[obj.getId()].texture != undefined) {
+			// console.log(this.objects[obj.getId()].buffers.textureCoords);
+			
+			//@ts-ignore
+			this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.objects[obj.getId()].buffers.textureCoords);
+
+			this.gl.vertexAttribPointer(
+				this.gl.getAttribLocation(program, 'vTexture'),
+				2,
+				this.gl.FLOAT,
+				false, 0, 0
+			);
+
+			this.gl.enableVertexAttribArray(this.gl.getAttribLocation(program, 'vTexture'))
 
 			this.gl.activeTexture(this.gl.TEXTURE0);
-			this.gl.bindTexture(this.gl.TEXTURE_2D, obj.getMaterial().getTexture())
-
-			console.log(this.objects[obj.getId()].buffers.texture);
-			this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.objects[obj.getId()].buffers.texture);
-			this.gl.vertexAttribPointer(this.gl.getAttribLocation(program, 'vTexture'), 2, this.gl.FLOAT, false, 0, 0);
-			this.gl.enableVertexAttribArray(this.gl.getAttribLocation(program, 'vTexture'))
+			let tex = this.objects[obj.getId()].texture
+			if(tex)
+				this.gl.bindTexture(this.gl.TEXTURE_2D, tex)
+			else
+				console.error("Texture not initialized.");
+			
 		}
 
 		if(this.objects[obj.getId()].buffers.indices) {
-			this.gl.drawElements(this.renderMethod, this.objects[obj.getId()].object.getVertices().length/2, this.gl.UNSIGNED_SHORT, 0)
+			this.gl.drawElements(this.renderMethod, this.objects[obj.getId()].object.getVertices().length*1.5, this.gl.UNSIGNED_SHORT, 0);
+			// console.log(this.objects[obj.getId()].object.getVertices().length);
 		}
 		else {
 			this.gl.drawArrays(this.renderMethod, 0, this.objects[obj.getId()].object.getVertices().length/3)
@@ -246,7 +280,7 @@ class Renderer {
 				this.gl.getUniformLocation(program, 'uProjectionMatrix'),
 				false,
 				projectionMatrix
-				);
+			);
 				
 				// console.log(mat4.getTranslation(vec3.create(), modelViewMatrix)) --> [0,0,-6]
 				
@@ -293,6 +327,7 @@ class Renderer {
 						this.gl.uniform1i(
 							this.gl.getUniformLocation(program, el.uniformName), parseInt(el.value)
 						)
+						break;
 				}
 			})
 

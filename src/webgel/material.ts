@@ -73,7 +73,7 @@ class textureMaterial extends Material {
 	src: string;
 	texture: WebGLTexture | undefined = undefined;
 	constructor(src: string) {
-		super(textureVSource, textureFSource, "texture", [], true)
+		super(textureVSource, textureFSource, "texture", [{uniformName: "uSampler", type: "int", value: 0}], true)
 		this.src = src;
 	}
 
