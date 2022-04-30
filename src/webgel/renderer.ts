@@ -74,6 +74,8 @@ class Renderer {
 			const indexBuffer = this.gl.createBuffer();
 			this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indexBuffer)
 			this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), this.gl.STATIC_DRAW);
+			console.log(new Uint16Array(indices));
+			
 			if(indexBuffer)
 				this.objects[id].buffers.indices = indexBuffer
 			else 
@@ -200,8 +202,8 @@ class Renderer {
 		}
 
 		if(this.objects[obj.getId()].buffers.indices) {
-			this.gl.drawElements(this.renderMethod, this.objects[obj.getId()].object.getVertices().length*1.5, this.gl.UNSIGNED_SHORT, 0);
-			// console.log(this.objects[obj.getId()].object.getVertices().length);
+			this.gl.drawElements(this.renderMethod, this.objects[obj.getId()].object.getIndices().length, this.gl.UNSIGNED_SHORT, 0);
+			// console.log(this.objects[obj.getId()].object.getVertices().length); this.objects[obj.getId()].object.getVertices().length*2
 		}
 		else {
 			this.gl.drawArrays(this.renderMethod, 0, this.objects[obj.getId()].object.getVertices().length/3)

@@ -2,14 +2,18 @@ import OBJLoader from "./webgel/objParser";
 // //@ts-ignore
 import obj from './untitled.obj'
 // let objLoader = new OBJLoader();
-// objLoader.load(obj, (d) => {
+// objLoader.load(`
+// o sdkjf
+// v 2 3 4
+
+// o burh
+// v 2 3 4
+// `, (d) => {
 //   console.log(d.vertices);
 //   console.log(d.indices);
 //   console.log(d.textureCoordinates);
   
 // })
-
-
 
 
 
@@ -19,7 +23,7 @@ import { normalMaterial, shaderMaterial, standardMaterial, textureMaterial } fro
 import { Renderer } from "./webgel/renderer";
 import Debug from "./webgel/debug";
 import './style.css';
-import texture from './poggers.jpg'
+import texture from './linx.png'
 
 //@ts-ignore
 import vertex from './shaders/testing/vertex.glsl'
@@ -84,13 +88,18 @@ let fuckymaterial = new shaderMaterial(vertex, fragment, "testing", [
 ])
 let lessfuckymaterial = new textureMaterial(texture);
 //@ts-ignore
-let model;
-modelLoader.load(obj, (data) => {
-  // renderer.renderMethod = webgel.glInstance.TRIANGLE_FAN
-  model = new Custom(new Vec3(0,-3,-10), data)
-  model.setMaterial(new standardMaterial());
-  console.log(data);
-  renderer.addObject(model)
+let model: Custom;
+let objfile: string; 
+(async () => { let res = await fetch(obj); objfile = await res.text()})().then(() => {
+  console.log(objfile.split("\n")[0]);
+  
+  modelLoader.load(objfile, (data) => {
+    renderer.renderMethod = webgel.glInstance.TRIANGLES
+    model = new Custom(new Vec3(0,0,0), data)
+    model.setMaterial(fuckymaterial);
+    console.log(data);
+    renderer.addObject(model)
+  }, {index: 0, name: undefined})
 })
 
 
@@ -106,9 +115,9 @@ renderer.useCamera(camera)
 let time = 0;
 webgel.loop((dt: number) => {
   fuckymaterial.updateUniform("time", time);
-  model.rotate.y(parseFloat(rotSpeed)*0.2)
-  model.rotate.x(parseFloat(rotSpeed)*0.1)
-  model.rotate.z(parseFloat(rotSpeed)*0.01)
+  // model.rotate.y(parseFloat(rotSpeed)*0.2)
+  // model.rotate.x(parseFloat(rotSpeed)*0.1)
+  // model.rotate.z(parseFloat(rotSpeed)*0.01)
   // plane.rotate.y(parseFloat(rotSpeed)*0.1)
   cube.move.y(Math.sin(time*2)*0.003)
   plane.rotate.y(0.001)
