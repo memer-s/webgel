@@ -5,6 +5,10 @@ interface ReturnObject {
 	normals: Array<number>
 }
 
+interface ReturnObjects {
+	[key: string]: ReturnObject
+}
+
 interface Options {
 	name: string | undefined,
 	index: number
@@ -75,11 +79,15 @@ class OBJLoader {
 		callback(OBJdata);
 	}
 
-	loadMultiple(file: string, callback: (data) => void) {
+	loadMultiple(file: string, callback: (data: any) => void) {
 		let objectList = file.split("\no ")
-		let objects = {};
-		for(let i = 0; i < objectList.length; i++) {
+		let objects: ReturnObjects = {};
+		console.log(objectList);
+		
+		for(let i = 0; i < objectList.length - 1; i++) {
+			console.log(objectList[i+1]);
 			let lines = objectList[i+1].split("\n");
+			
 			let OBJdata = {
 				vertices: [],
 				indices: [],
@@ -129,7 +137,9 @@ class OBJLoader {
 					}
 				}
 			}
+			objects[lines[0]] = OBJdata
 		}
+		callback(objects)
 	}
 }
 

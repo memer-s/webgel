@@ -26,9 +26,9 @@ import './style.css';
 import texture from './linx.png'
 
 //@ts-ignore
-import vertex from './shaders/testing/vertex.glsl'
+import vertex from './shaders/wave/vertex.glsl'
 //@ts-ignore
-import fragment from './shaders/testing/fragment.glsl'
+import fragment from './shaders/wave/fragment.glsl'
 
 let canvas: any = document.getElementById("c");
 canvas.height = window.innerHeight;
@@ -91,15 +91,19 @@ let lessfuckymaterial = new textureMaterial(texture);
 let model: Custom;
 let objfile: string; 
 (async () => { let res = await fetch(obj); objfile = await res.text()})().then(() => {
-  console.log(objfile.split("\n")[0]);
-  
-  modelLoader.load(objfile, (data) => {
-    renderer.renderMethod = webgel.glInstance.TRIANGLES
-    model = new Custom(new Vec3(0,0,0), data)
-    model.setMaterial(fuckymaterial);
+  modelLoader.loadMultiple(objfile, (data: object) => {
     console.log(data);
-    renderer.addObject(model)
-  }, {index: 0, name: undefined})
+    let i = 0;
+    for(const key in data) {
+      i+=1
+      let el = data[key];
+      console.log(el);
+      
+      model = new Custom(new Vec3(0,0.5,0), el)
+      model.setMaterial(fuckymaterial);
+      renderer.addObject(model)
+    }
+  })
 })
 
 
@@ -116,7 +120,8 @@ let time = 0;
 webgel.loop((dt: number) => {
   fuckymaterial.updateUniform("time", time);
   // model.rotate.y(parseFloat(rotSpeed)*0.2)
-  // model.rotate.x(parseFloat(rotSpeed)*0.1)
+  if(model)
+  model.rotate.x(parseFloat(rotSpeed)*0.1)
   // model.rotate.z(parseFloat(rotSpeed)*0.01)
   // plane.rotate.y(parseFloat(rotSpeed)*0.1)
   cube.move.y(Math.sin(time*2)*0.003)
